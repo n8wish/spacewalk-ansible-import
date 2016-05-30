@@ -7,7 +7,7 @@ Use at your own risk!
 Pulls the hostlist from Spacewalk API and saves in a file <systemgroup>.hosts for furter usage in Ansible
 Config file support (command line options beat config file).
 
-The <systemgroup>.hosts file(s) that you create with this script, you can simply link the /etc/ansible/hosts to it or do deploy your own script here to implement more complex stuff.
+The \<systemgroup\>.hosts file(s) that you create with this script, you can simply link the /etc/ansible/hosts to it or do deploy your own script here to implement more complex stuff.
 
 # Install: #
 
@@ -25,7 +25,7 @@ vi /etc/cron.hourly/97spacewalk-ansible-import.cron
 
 cd /etc/ansible
 
-ln -s hosts <systemgroup>.hosts
+ln -s hosts \<systemgroup\>.hosts
 
 # Usage: #
 
