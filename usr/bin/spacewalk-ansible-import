@@ -1,0 +1,182 @@
+#!/usr/bin/perl
+
+###### spacewalk-ansible-importer ###################################
+#
+#   version 1.1
+#   2016-05-26 Jens Neu <jens@zeeroos.de>
+#
+#   Script for importing a Spacewalk Systemgroup in Ansible "hosts" format via Frontier::Client
+#   This software in "works for me" status, tested on Fedora 23 and Centos 7 against Spacewalk 2.4
+#   Use at your own risk!
+#   Pulls the hostlist from Spacewalk API and saves in a file <systemgroup>.hosts for furter usage on Ansible
+#   Config file support (command line options beat config file)
+#   Shortcomings: Frontier::client via plain HTTP, no help, no manpage, (almost) no error handling.
+#   Todo v1.2: lock file support for proper cron.hourly execution
+#   License: GPLv2
+
+
+use strict;
+use warnings;
+
+use Getopt::Long qw(GetOptions);
+use Frontier::Client;
+use Term::ReadPassword qw(read_password);
+use Config::Simple;
+#use Data::Dumper;
+
+my %options;
+my $config_path = '/etc/spacewalk-ansible-import/config';
+my %Config;
+my $cfg;
+my $spacewalk_server = '';
+my $spacewalk_server_opt = '';
+my $spacewalk_user = '';
+my $spacewalk_user_opt = '';
+my $spacewalk_password = '';
+my $spacewalk_password_opt = '';
+my $systemgroup = '';
+my $systemgroup_opt = '';
+my $resource_path = './';
+my $resource_path_opt = '';
+
+if (-e $config_path) {
+
+    Config::Simple->import_from($config_path, \%Config);
+    $cfg = new Config::Simple($config_path);
+}
+
+#print Data::Dumper->Dump([\%Config]),$/;
+
+### get Options
+
+GetOptions (
+    'spacewalk_server=s' => \$spacewalk_server_opt,
+    'spacewalk_user=s' => \$spacewalk_user_opt,
+    'spacewalk_password=s' => \$spacewalk_password_opt,
+    'systemgroup=s' => \$systemgroup_opt,
+    'resource_path=s' => \$resource_path_opt
+    
+) or die "Usage: $0 --spacewalk_server FQDN --spacewalk_user USER --systemgroup GROUP --resource_path PATH\n";
+
+
+### Define spacewalk_server
+
+if ( $Config{'spacewalk'} )  {
+    
+    $spacewalk_server = $Config{'spacewalk'};
+}
+
+
+if ($spacewalk_server_opt) {
+
+    $spacewalk_server = $spacewalk_server_opt;
+}
+
+#print "Config (server): " . $spacewalk_server . " " . $spacewalk_server_opt . "\n";
+
+if ($spacewalk_server eq '') {
+
+    print "Spacewalk Server: ";
+    $spacewalk_server = readline(STDIN);
+}
+
+### Define spacewalk_user
+
+if ( $Config{'user'} )  {
+    
+    $spacewalk_user = $Config{'user'};
+}
+
+if ($spacewalk_user_opt) {
+
+    $spacewalk_user = $spacewalk_user_opt;
+}
+
+#print "Config (user): " . $spacewalk_user . " " . $spacewalk_user_opt . "\n";
+
+if ($spacewalk_user eq '') {
+
+    print "Spacewalk User: ";
+    $spacewalk_user = readline(STDIN);
+}
+
+### Define spacewalk_password
+
+if ( $Config{'password'} )  {
+    
+    $spacewalk_password = $Config{'password'};
+}
+
+
+if ($spacewalk_password_opt) {
+
+    $spacewalk_password = $spacewalk_password_opt;
+}
+
+#print "Config (password): " . $spacewalk_password . " " . $spacewalk_password_opt . "\n";
+
+if ($spacewalk_password eq '') {
+
+    $spacewalk_password = read_password("Spacewalk Password: ");
+    
+}
+
+### Define systemgroup
+
+if ( $Config{'systemgroup'} )  {
+    
+    $systemgroup = $Config{'systemgroup'};
+}
+
+if ($systemgroup_opt) {
+
+    $systemgroup = $systemgroup_opt;
+}
+
+#print "Config (systemgroup): " . $systemgroup . " " . $systemgroup_opt . "\n";
+
+if ($systemgroup eq '') {
+
+    print "Systemgroup: ";
+    $systemgroup = readline(STDIN);
+    chomp $systemgroup;
+}
+
+### Define resource_path
+
+if ( $Config{'resource_path'} )  {
+    
+    $resource_path = $Config{'resource_path'};
+}
+
+if ($resource_path_opt) {
+
+    $resource_path = $resource_path_opt;
+}
+
+### Create Frontier
+
+my $resource_filename = $systemgroup . '.hosts';
+my $resource_file = $resource_path . "/" . $resource_filename;
+
+open (my $RESOURCE, '>', $resource_file) or die "Error opening file: $!";
+
+my $client = new Frontier::Client(url => "http://$spacewalk_server/rpc/api");
+my $session = $client->call('auth.login',$spacewalk_user, $spacewalk_password);
+my $systems = $client->call('systemgroup.listSystems', $session, $systemgroup);
+
+print "[".$systemgroup."]\n";
+print $RESOURCE "[".$systemgroup."]\n";
+
+foreach my $system (@$systems) {
+        #print $system->{'hostname'}."\t".$system->{'id'}."\t".$system->{'release'}."\n";
+        print $system->{'hostname'}."\t#".$system->{'id'}."\n";
+}
+
+foreach my $system (@$systems) {
+        #print $system->{'hostname'}."\t".$system->{'id'}."\t".$system->{'release'}."\n";
+        print $RESOURCE $system->{'hostname'}."\t#".$system->{'id'}."\n";
+}
+
+$client->call('auth.logout', $session);
+close $RESOURCE;

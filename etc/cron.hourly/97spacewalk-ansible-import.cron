@@ -1,0 +1,8 @@
+#!/bin/bash
+
+### PROJECT0
+#/usr/bin/spacewalk-ansible-import --systemgroup project0 --resource_path /etc/ansible > /dev/null 2>&1
+
+### PROJECT1
+#/usr/bin/spacewalk-ransible-import --systemgroup project1 --resource_path /etc/ansible > /dev/null 2>&1
+

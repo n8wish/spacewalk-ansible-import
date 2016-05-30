@@ -1,0 +1,17 @@
+### Spacewalk to Ansible Importer
+
+### Spacewalk Server FQDN
+spacewalk: spacewalk.example.com
+
+### Spacewalk API User
+user: admin
+
+### Spacewalk password
+password: changeme
+
+### Spacewalk group to download
+systemgroup: ansible
+
+# resource path, file where host list will be placed. Default is pwd.
+#resource_path: /tmp
+
